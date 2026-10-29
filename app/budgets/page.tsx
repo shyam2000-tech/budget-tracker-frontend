@@ -8,6 +8,8 @@ import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
+import { DatePicker } from "../../components/ui/DatePicker";
+import { MonthPicker } from "../../components/ui/MonthPicker";
 import { api } from "../../lib/api";
 import { Budget, Category } from "../../types";
 import {
@@ -22,7 +24,6 @@ import {
   Trash2,
   AlertTriangle,
   CheckCircle,
-  Calendar,
 } from "lucide-react";
 
 export default function BudgetsPage() {
@@ -60,6 +61,7 @@ export default function BudgetsPage() {
   }, []);
 
   const fetchBudgets = useCallback(async () => {
+    if (!applicablePeriod) return;
     try {
       setLoading(true);
       const res = await api.budgets.list({
@@ -144,33 +146,17 @@ export default function BudgetsPage() {
 
   return (
     <AppLayout onRefresh={fetchBudgets}>
-      <div className="space-y-5">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
-              Budget Management
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Set spending limits for categories and track consumption in real time
-            </p>
-          </div>
-          <Button variant="primary" size="sm" onClick={handleOpenCreateModal}>
-            <Plus className="w-4 h-4" />
-            Set Budget Limit
-          </Button>
-        </div>
-
+      <div className="space-y-4 sm:space-y-5">
         {/* Period Selector Tabs */}
-        <Card className="p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex rounded-lg bg-slate-100 p-1">
+        <Card className="p-2.5 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="flex rounded-lg bg-slate-100 p-0.5 sm:p-1 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => handlePeriodFilterChange("monthly")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                className={`flex-1 sm:flex-initial px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   periodFilter === "monthly"
-                    ? "bg-white text-purple-700 shadow-xs"
+                    ? "bg-white text-purple-700 shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -179,9 +165,9 @@ export default function BudgetsPage() {
               <button
                 type="button"
                 onClick={() => handlePeriodFilterChange("daily")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                className={`flex-1 sm:flex-initial px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-semibold rounded-md transition-colors ${
                   periodFilter === "daily"
-                    ? "bg-white text-purple-700 shadow-xs"
+                    ? "bg-white text-purple-700 shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
@@ -190,22 +176,28 @@ export default function BudgetsPage() {
             </div>
 
             {/* Applicable Period input */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500">Period:</span>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
+              <span className="text-[11px] font-medium text-slate-500">Period:</span>
               {periodFilter === "monthly" ? (
-                <input
-                  type="month"
-                  value={applicablePeriod}
-                  onChange={(e) => setApplicablePeriod(e.target.value)}
-                  className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-                />
+                <div className="w-28 sm:w-32">
+                  <MonthPicker
+                    value={applicablePeriod}
+                    onChange={(m) => setApplicablePeriod(m)}
+                    placeholder="Pick month"
+                    align="right"
+                    size="sm"
+                  />
+                </div>
               ) : (
-                <input
-                  type="date"
-                  value={applicablePeriod}
-                  onChange={(e) => setApplicablePeriod(e.target.value)}
-                  className="px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
-                />
+                <div className="w-28 sm:w-32">
+                  <DatePicker
+                    value={applicablePeriod}
+                    onChange={(d) => setApplicablePeriod(d)}
+                    placeholder="Pick date"
+                    align="right"
+                    size="sm"
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -214,21 +206,32 @@ export default function BudgetsPage() {
         {/* Budgets Grid */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <PiggyBank className="w-4 h-4 text-purple-600" />
+            <div className="flex items-center gap-1.5">
+              <PiggyBank className="w-3.5 h-3.5 text-purple-600" />
               <CardTitle>
                 Active Limits ({budgets.length})
               </CardTitle>
             </div>
-            {loading && <span className="text-xs text-slate-400">Loading...</span>}
+            <div className="flex items-center gap-2">
+              {loading && <span className="text-[10px] text-slate-400">Loading...</span>}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleOpenCreateModal}
+                className="text-xs px-2.5 py-1 shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Set Limit</span>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {budgets.length === 0 && !loading ? (
-              <div className="p-12 text-center text-xs text-slate-400">
-                No budgets configured for {applicablePeriod}. Click &quot;Set Budget Limit&quot; to add one.
+              <div className="p-8 text-center text-xs text-slate-400">
+                No budgets configured for {applicablePeriod}. Click &quot;Set Limit&quot; to add one.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
                 {budgets.map((b) => {
                   const categoryName = b.category ? b.category.name : "Overall Spending Limit";
                   const categoryColor = b.category ? b.category.color : "#7c3aed";
@@ -236,21 +239,21 @@ export default function BudgetsPage() {
                   return (
                     <div
                       key={b.id}
-                      className="p-4 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all shadow-xs space-y-3"
+                      className="p-3 sm:p-3.5 rounded-lg sm:rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all shadow-2xs space-y-2.5"
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2">
                           <span
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-white text-[11px] sm:text-xs font-bold shrink-0"
                             style={{ backgroundColor: categoryColor || "#7c3aed" }}
                           >
                             {categoryName[0]}
                           </span>
                           <div>
-                            <h4 className="text-xs font-bold text-slate-900">
+                            <h4 className="text-xs font-bold text-slate-900 line-clamp-1">
                               {categoryName}
                             </h4>
-                            <p className="text-[10px] text-slate-400 uppercase">
+                            <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase">
                               {b.period} • {b.applicablePeriod}
                             </p>
                           </div>
@@ -266,23 +269,23 @@ export default function BudgetsPage() {
                       </div>
 
                       {/* Numbers */}
-                      <div className="flex items-baseline justify-between text-xs pt-1">
+                      <div className="flex items-baseline justify-between text-xs pt-0.5">
                         <div>
-                          <span className="text-slate-400">Spent: </span>
-                          <span className="font-bold text-slate-900">
+                          <span className="text-slate-400 text-[11px]">Spent: </span>
+                          <span className="font-bold text-slate-900 text-[11px] sm:text-xs">
                             {formatRupees(b.spentPaise)}
                           </span>
                         </div>
                         <div>
-                          <span className="text-slate-400">Limit: </span>
-                          <span className="font-bold text-slate-700">
+                          <span className="text-slate-400 text-[11px]">Limit: </span>
+                          <span className="font-bold text-slate-700 text-[11px] sm:text-xs">
                             {formatRupees(b.limitPaise)}
                           </span>
                         </div>
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-100 overflow-hidden">
                         <div
                           style={{ width: `${Math.min(100, b.percentageConsumed)}%` }}
                           className={`h-full transition-all duration-300 ${
@@ -296,24 +299,24 @@ export default function BudgetsPage() {
                       </div>
 
                       {/* Bottom status badge */}
-                      <div className="flex items-center justify-between text-[11px] pt-1">
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] pt-0.5">
                         <span className="text-slate-500 font-medium">
                           {b.percentageConsumed}% used
                         </span>
 
                         {b.isExceeded ? (
-                          <Badge variant="danger" className="text-[10px]">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            Exceeded by {formatRupees(b.spentPaise - b.limitPaise)}
+                          <Badge variant="danger" className="text-[9px] py-0 px-1">
+                            <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                            Over {formatRupees(b.spentPaise - b.limitPaise)}
                           </Badge>
                         ) : b.isWarning ? (
-                          <Badge variant="warning" className="text-[10px]">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            Near Limit (&ge;{b.alertThreshold}%)
+                          <Badge variant="warning" className="text-[9px] py-0 px-1">
+                            <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                            Near Limit
                           </Badge>
                         ) : (
-                          <Badge variant="success" className="text-[10px]">
-                            <CheckCircle className="w-3 h-3 mr-1" />
+                          <Badge variant="success" className="text-[9px] py-0 px-1">
+                            <CheckCircle className="w-2.5 h-2.5 mr-0.5" />
                             {formatRupees(b.remainingPaise)} left
                           </Badge>
                         )}
@@ -335,9 +338,9 @@ export default function BudgetsPage() {
         description="Define a spending limit for a category or total monthly spend"
         maxWidth="md"
       >
-        <form onSubmit={handleSaveBudget} className="space-y-4">
+        <form onSubmit={handleSaveBudget} className="space-y-3.5">
           {formError && (
-            <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-lg">
+            <div className="p-2.5 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-lg">
               {formError}
             </div>
           )}
@@ -349,9 +352,9 @@ export default function BudgetsPage() {
                 setFormPeriod("monthly");
                 setFormApplicablePeriod(getCurrentMonthString());
               }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+              className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
                 formPeriod === "monthly"
-                  ? "bg-white text-purple-700 shadow-xs"
+                  ? "bg-white text-purple-700 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -363,9 +366,9 @@ export default function BudgetsPage() {
                 setFormPeriod("daily");
                 setFormApplicablePeriod(getTodayDateString());
               }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+              className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
                 formPeriod === "daily"
-                  ? "bg-white text-purple-700 shadow-xs"
+                  ? "bg-white text-purple-700 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -387,20 +390,17 @@ export default function BudgetsPage() {
           </Select>
 
           {formPeriod === "monthly" ? (
-            <Input
+            <MonthPicker
               label="Applicable Month"
-              type="month"
               value={formApplicablePeriod}
-              onChange={(e) => setFormApplicablePeriod(e.target.value)}
-              required
+              onChange={(m) => setFormApplicablePeriod(m)}
+              align="left"
             />
           ) : (
-            <Input
+            <DatePicker
               label="Applicable Date"
-              type="date"
               value={formApplicablePeriod}
-              onChange={(e) => setFormApplicablePeriod(e.target.value)}
-              required
+              onChange={(d) => setFormApplicablePeriod(d)}
             />
           )}
 
@@ -425,13 +425,14 @@ export default function BudgetsPage() {
             helperText="Highlight warning when spending reaches this percentage"
           />
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-2.5 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setIsModalOpen(false)}
               disabled={saving}
+              className="text-xs"
             >
               Cancel
             </Button>
@@ -440,6 +441,7 @@ export default function BudgetsPage() {
               variant="primary"
               size="sm"
               isLoading={saving}
+              className="text-xs"
             >
               Save Budget
             </Button>

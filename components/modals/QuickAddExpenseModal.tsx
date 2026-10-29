@@ -5,6 +5,7 @@ import { Modal } from "../ui/Modal";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
+import { DatePicker } from "../ui/DatePicker";
 import { api } from "../../lib/api";
 import { Category } from "../../types";
 import { rupeesToPaise, getTodayDateString } from "../../lib/format";
@@ -104,9 +105,9 @@ export const QuickAddExpenseModal = ({
       description="Record a daily expense or income quickly"
       maxWidth="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {error && (
-          <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-lg">
+          <div className="p-2.5 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-lg">
             {error}
           </div>
         )}
@@ -115,9 +116,9 @@ export const QuickAddExpenseModal = ({
           <button
             type="button"
             onClick={() => setType("expense")}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
               type === "expense"
-                ? "bg-white text-purple-700 shadow-xs"
+                ? "bg-white text-purple-700 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -126,9 +127,9 @@ export const QuickAddExpenseModal = ({
           <button
             type="button"
             onClick={() => setType("income")}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+            className={`flex-1 py-1 text-xs font-semibold rounded-md transition-colors ${
               type === "income"
-                ? "bg-white text-emerald-700 shadow-xs"
+                ? "bg-white text-emerald-700 shadow-2xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -160,12 +161,10 @@ export const QuickAddExpenseModal = ({
           ))}
         </Select>
 
-        <Input
+        <DatePicker
           label="Date"
-          type="date"
           value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
+          onChange={(d) => setDate(d)}
         />
 
         <Input
@@ -188,13 +187,14 @@ export const QuickAddExpenseModal = ({
           <option value="netbanking">Net Banking</option>
         </Select>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2.5 pt-2.5 border-t border-slate-100">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onClose}
             disabled={loading}
+            className="text-xs"
           >
             Cancel
           </Button>
@@ -203,6 +203,7 @@ export const QuickAddExpenseModal = ({
             variant="primary"
             size="sm"
             isLoading={loading}
+            className="text-xs"
           >
             Save Transaction
           </Button>
