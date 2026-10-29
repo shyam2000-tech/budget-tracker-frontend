@@ -9,7 +9,7 @@ export const Card = ({
   return (
     <div
       className={cn(
-        "bg-white rounded-xl border border-slate-200/80 shadow-xs hover:border-slate-300/80 transition-all",
+        "bg-white rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300/80 transition-all",
         className
       )}
       {...props}
@@ -26,7 +26,10 @@ export const CardHeader = ({
 }: HTMLAttributes<HTMLDivElement>) => {
   return (
     <div
-      className={cn("px-5 py-4 border-b border-slate-100 flex items-center justify-between", className)}
+      className={cn(
+        "px-3.5 py-2.5 sm:px-5 sm:py-3.5 border-b border-slate-100 flex items-center justify-between",
+        className
+      )}
       {...props}
     >
       {children}
@@ -41,7 +44,7 @@ export const CardTitle = ({
 }: HTMLAttributes<HTMLHeadingElement>) => {
   return (
     <h3
-      className={cn("text-sm font-semibold text-slate-800 tracking-tight", className)}
+      className={cn("text-xs sm:text-sm font-semibold text-slate-800 tracking-tight", className)}
       {...props}
     >
       {children}
@@ -55,9 +58,8 @@ export const CardContent = ({
   ...props
 }: HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div className={cn("p-5", className)} {...props}>
+    <div className={cn("p-3.5 sm:p-5", className)} {...props}>
       {children}
     </div>
   );
 };
-

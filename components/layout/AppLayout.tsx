@@ -23,8 +23,8 @@ export const AppLayout = ({ children, onRefresh }: AppLayoutProps) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-9 h-9 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="w-7 h-7 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-medium text-slate-500">Loading your budget space...</p>
         </div>
       </div>
@@ -38,10 +38,9 @@ export const AppLayout = ({ children, onRefresh }: AppLayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar onExpenseAdded={onRefresh} />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
         {children}
       </main>
     </div>
   );
 };
-

@@ -19,7 +19,7 @@ interface SpendingTrendChartProps {
 export const SpendingTrendChart = ({ data }: SpendingTrendChartProps) => {
   if (!data || data.length === 0) {
     return (
-      <div className="h-48 flex items-center justify-center text-xs text-slate-400">
+      <div className="h-36 sm:h-48 flex items-center justify-center text-xs text-slate-400">
         No spending recorded this month yet.
       </div>
     );
@@ -34,7 +34,7 @@ export const SpendingTrendChart = ({ data }: SpendingTrendChartProps) => {
   }));
 
   return (
-    <div className="w-full h-48 sm:h-56">
+    <div className="w-full h-36 sm:h-48">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
@@ -85,4 +85,3 @@ export const SpendingTrendChart = ({ data }: SpendingTrendChartProps) => {
     </div>
   );
 };
-

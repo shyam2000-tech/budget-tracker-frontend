@@ -14,11 +14,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
     return (
-      <div className="w-full space-y-1.5">
+      <div className="w-full space-y-1 sm:space-y-1.5">
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
+            className="block text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-700"
           >
             {label}
           </label>
@@ -27,15 +27,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           ref={ref}
           className={cn(
-            "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 transition-colors",
+            "w-full rounded-lg border border-slate-300 bg-white px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 transition-colors shadow-2xs",
             error && "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20",
             className
           )}
           {...props}
         />
-        {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
+        {error && <p className="text-[11px] sm:text-xs text-rose-600 font-medium">{error}</p>}
         {helperText && !error && (
-          <p className="text-xs text-slate-500">{helperText}</p>
+          <p className="text-[11px] sm:text-xs text-slate-500">{helperText}</p>
         )}
       </div>
     );
