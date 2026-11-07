@@ -1,50 +1,72 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { AppLayout } from "../../components/layout/AppLayout";
-import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { Badge } from "../../components/ui/Badge";
 import { SpendingTrendChart } from "../../components/dashboard/SpendingTrendChart";
-import { CategoryBreakdownBar } from "../../components/dashboard/CategoryBreakdownBar";
-import { QuickAddExpenseModal } from "../../components/modals/QuickAddExpenseModal";
+import { WalletIllustration } from "../../components/dashboard/WalletIllustration";
+import { MonthPicker } from "../../components/ui/MonthPicker";
+import { useAuth } from "../../context/AuthContext";
 import { api } from "../../lib/api";
 import {
   DashboardOverview,
   MonthSpendingSummary,
   DaySpendingSummary,
+  Category,
 } from "../../types";
-import { formatRupees, formatDate } from "../../lib/format";
+import { formatRupees, formatDate, getCurrentMonthString } from "../../lib/format";
 import {
-  ArrowUpRight,
-  ArrowDownLeft,
-  Calendar,
-  CreditCard,
-  AlertTriangle,
-  CheckCircle,
+  Wallet,
+  TrendingUp,
+  Layers,
+  BarChart3,
+  Clock,
+  ArrowRight,
+  Utensils,
+  ShoppingCart,
+  Car,
   ReceiptText,
+  Tv,
+  HeartPulse,
+  BookOpen,
+  Tag,
+  ChevronDown,
+  Calendar,
 } from "lucide-react";
 
-export default function DashboardPage() {
+export default function HomePage() {
+  const { user } = useAuth();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [monthSummary, setMonthSummary] = useState<MonthSpendingSummary | null>(null);
   const [todaySummary, setTodaySummary] = useState<DaySpendingSummary | null>(null);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [greeting, setGreeting] = useState("Good Afternoon,");
+
+  useEffect(() => {
+    setSelectedMonth(getCurrentMonthString());
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good Morning,");
+    else if (hour < 17) setGreeting("Good Afternoon,");
+    else setGreeting("Good Evening,");
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [overviewRes, monthRes, todayRes] = await Promise.all([
+      const [overviewRes, monthRes, todayRes, categoriesRes] = await Promise.all([
         api.dashboard.overview(),
         api.dashboard.monthly(),
         api.dashboard.daily(),
+        api.categories.list(),
       ]);
 
       if (overviewRes.success) setOverview(overviewRes.data);
       if (monthRes.success) setMonthSummary(monthRes.data);
       if (todayRes.success) setTodaySummary(todayRes.data);
+      if (categoriesRes.success) setAllCategories(categoriesRes.data);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
     } finally {
@@ -56,281 +78,369 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  // Format month name for display in hero pill e.g. "Nov 2026"
+  const formatMonthPill = (monthStr: string) => {
+    if (!monthStr || !monthStr.includes("-")) return "Nov 2026";
+    const [y, m] = monthStr.split("-");
+    const monthNames = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    const monthIdx = parseInt(m, 10) - 1;
+    return `${monthNames[monthIdx] || ""} ${y}`;
+  };
+
+  // Helper icon selection for categories
+  const getCategoryIcon = (name: string, color?: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes("food") || lower.includes("dine") || lower.includes("lunch") || lower.includes("restaurant") || lower.includes("cafe")) {
+      return <Utensils className="w-5 h-5 text-purple-600" />;
+    }
+    if (lower.includes("shop") || lower.includes("grocer") || lower.includes("store") || lower.includes("market")) {
+      return <ShoppingCart className="w-5 h-5 text-indigo-600" />;
+    }
+    if (lower.includes("trans") || lower.includes("fuel") || lower.includes("travel") || lower.includes("car")) {
+      return <Car className="w-5 h-5 text-cyan-600" />;
+    }
+    if (lower.includes("bill") || lower.includes("util") || lower.includes("rent") || lower.includes("recharge")) {
+      return <ReceiptText className="w-5 h-5 text-amber-600" />;
+    }
+    if (lower.includes("ent") || lower.includes("movie") || lower.includes("show") || lower.includes("netflix")) {
+      return <Tv className="w-5 h-5 text-rose-600" />;
+    }
+    if (lower.includes("health") || lower.includes("medic") || lower.includes("doctor")) {
+      return <HeartPulse className="w-5 h-5 text-emerald-600" />;
+    }
+    if (lower.includes("book") || lower.includes("course") || lower.includes("study") || lower.includes("edu")) {
+      return <BookOpen className="w-5 h-5 text-blue-600" />;
+    }
+    return <Tag className="w-5 h-5 text-purple-600" />;
+  };
+
+  // Sorted Categories: High to Low (most expensed category first, then lower ones)
+  const sortedCategories = useMemo(() => {
+    const spendingMap = new Map<string, number>();
+    if (overview?.topCategories) {
+      for (const item of overview.topCategories) {
+        spendingMap.set(item.categoryId, item.totalPaise);
+      }
+    }
+
+    if (allCategories.length > 0) {
+      const list = allCategories.map((c) => ({
+        categoryId: c._id,
+        name: c.name,
+        color: c.color || "#7c3aed",
+        totalPaise: spendingMap.get(c._id) || 0,
+      }));
+
+      // High to low sorting: most spent first
+      list.sort((a, b) => {
+        if (b.totalPaise !== a.totalPaise) {
+          return b.totalPaise - a.totalPaise;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      return list;
+    }
+
+    if (overview?.topCategories && overview.topCategories.length > 0) {
+      const list = [...overview.topCategories];
+      list.sort((a, b) => b.totalPaise - a.totalPaise);
+      return list;
+    }
+
+    return [];
+  }, [allCategories, overview?.topCategories]);
+
+  const firstName = user?.name ? user.name.split(" ")[0] : "Shyam";
+
   return (
     <AppLayout onRefresh={fetchDashboardData}>
-      <div className="space-y-4 sm:space-y-6">
-        {/* 4 Metric KPI Cards - 2 Columns on Mobile */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          {/* Today Spending */}
-          <Card className="p-3 sm:p-4 bg-white border-l-3 sm:border-l-4 border-l-purple-600">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
-                Today&apos;s Spend
-              </span>
-              <div className="p-1 rounded-md bg-purple-50 text-purple-600 shrink-0">
-                <Calendar className="w-3.5 h-3.5" />
-              </div>
-            </div>
-            <div className="mt-1 sm:mt-2">
-              <div className="text-sm sm:text-lg font-bold text-slate-900 truncate">
-                {formatRupees(overview?.todayExpensePaise || 0)}
-              </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
-                {todaySummary?.transactionCount || 0} txn(s) today
-              </p>
-            </div>
-          </Card>
+      <div className="space-y-4 sm:space-y-5">
+        {/* Hero Greeting Card */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#291b49] via-[#372462] to-[#1c1236] p-5 sm:p-6 text-white shadow-lg border border-purple-900/30">
+          {/* Subtle curved background wave */}
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-400 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute -bottom-8 -right-8 w-44 h-44 rounded-full bg-purple-600/20 blur-2xl pointer-events-none" />
 
-          {/* Monthly Spending */}
-          <Card className="p-3 sm:p-4 bg-white border-l-3 sm:border-l-4 border-l-rose-500">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
-                Month Spend
-              </span>
-              <div className="p-1 rounded-md bg-rose-50 text-rose-600 shrink-0">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-            <div className="mt-1 sm:mt-2">
-              <div className="text-sm sm:text-lg font-bold text-slate-900 truncate">
-                {formatRupees(overview?.monthExpensePaise || 0)}
-              </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
-                Avg. {formatRupees(monthSummary?.dailyAveragePaise || 0)}/d
+          <div className="relative z-10 flex items-center justify-between gap-3">
+            {/* Left Content */}
+            <div className="space-y-1">
+              <p className="text-xs sm:text-sm font-medium text-purple-200/90">
+                {greeting}
               </p>
-            </div>
-          </Card>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                <span>{firstName}</span>
+                <span className="inline-block animate-wave text-xl sm:text-2xl">👋</span>
+              </h2>
+              <p className="text-xs text-purple-200/80 pt-0.5">
+                Keep your spending in control.
+              </p>
 
-          {/* Monthly Income */}
-          <Card className="p-3 sm:p-4 bg-white border-l-3 sm:border-l-4 border-l-emerald-500">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
-                Month Income
-              </span>
-              <div className="p-1 rounded-md bg-emerald-50 text-emerald-600 shrink-0">
-                <ArrowDownLeft className="w-3.5 h-3.5" />
+              {/* Month Selector Pill */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-semibold text-white transition-colors cursor-pointer shadow-xs backdrop-blur-xs"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-purple-300" />
+                  <span>{formatMonthPill(selectedMonth)}</span>
+                  <ChevronDown className="w-3 h-3 text-purple-300" />
+                </button>
+
+                {isMonthPickerOpen && (
+                  <div className="absolute left-5 mt-2 z-50">
+                    <MonthPicker
+                      value={selectedMonth}
+                      onChange={(m) => {
+                        setSelectedMonth(m);
+                        setIsMonthPickerOpen(false);
+                      }}
+                      align="left"
+                    />
+                  </div>
+                )}
               </div>
             </div>
-            <div className="mt-1 sm:mt-2">
-              <div className="text-sm sm:text-lg font-bold text-slate-900 truncate">
-                {formatRupees(overview?.monthIncomePaise || 0)}
-              </div>
-              <p className="text-[10px] sm:text-[11px] text-emerald-600 font-medium mt-0.5 truncate">
-                Recorded income
-              </p>
+
+            {/* Right 3D Wallet Illustration */}
+            <WalletIllustration className="w-28 h-24 sm:w-36 sm:h-28" />
+          </div>
+        </div>
+
+        {/* 4 Metric KPI Cards - 2x2 Pastel Grid */}
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+          {/* Month Income */}
+          <div className="bg-[#eefcf2] border border-[#d1fae5] rounded-2xl p-3 sm:p-4 shadow-2xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white shadow-2xs flex items-center justify-center text-emerald-600 mb-2">
+              <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-          </Card>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-700">
+              Month Income
+            </p>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 truncate">
+              {formatRupees(overview?.monthIncomePaise || 0)}
+            </p>
+          </div>
+
+          {/* Month Spend */}
+          <div className="bg-[#fff1f2] border border-[#ffe4e6] rounded-2xl p-3 sm:p-4 shadow-2xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white shadow-2xs flex items-center justify-center text-rose-500 mb-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-700">
+              Month Spend
+            </p>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 truncate">
+              {formatRupees(overview?.monthExpensePaise || 0)}
+            </p>
+          </div>
 
           {/* Net Savings */}
-          <Card className="p-3 sm:p-4 bg-white border-l-3 sm:border-l-4 border-l-indigo-500">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
-                Net Savings
-              </span>
-              <div className="p-1 rounded-md bg-indigo-50 text-indigo-600 shrink-0">
-                <CreditCard className="w-3.5 h-3.5" />
-              </div>
+          <div className="bg-[#f5f3ff] border border-[#ede9fe] rounded-2xl p-3 sm:p-4 shadow-2xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white shadow-2xs flex items-center justify-center text-purple-600 mb-2">
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="mt-1 sm:mt-2">
-              <div
-                className={`text-sm sm:text-lg font-bold truncate ${
-                  (overview?.netSavingsPaise || 0) >= 0
-                    ? "text-slate-900"
-                    : "text-rose-600"
-                }`}
-              >
-                {formatRupees(overview?.netSavingsPaise || 0)}
-              </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
-                {(overview?.netSavingsPaise || 0) >= 0 ? "Surplus" : "Deficit"}
-              </p>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-700">
+              Net Savings
+            </p>
+            <p
+              className={`text-sm sm:text-lg font-bold mt-0.5 truncate ${
+                (overview?.netSavingsPaise || 0) >= 0
+                  ? "text-slate-900"
+                  : "text-rose-600"
+              }`}
+            >
+              {formatRupees(overview?.netSavingsPaise || 0)}
+            </p>
+          </div>
+
+          {/* Today's Spend */}
+          <div className="bg-[#fffbeb] border border-[#fef3c7] rounded-2xl p-3 sm:p-4 shadow-2xs">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white shadow-2xs flex items-center justify-center text-amber-500 mb-2">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-          </Card>
+            <p className="text-[11px] sm:text-xs font-medium text-slate-700">
+              Today&apos;s Spend
+            </p>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 mt-0.5 truncate">
+              {formatRupees(overview?.todayExpensePaise || 0)}
+            </p>
+          </div>
         </div>
 
-        {/* Budget Status Banner if budget exists */}
-        {overview?.budgetSummary && (
-          <Card className="p-3 sm:p-4 bg-gradient-to-r from-purple-50/80 to-indigo-50/50 border border-purple-200/80">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2">
-                {overview.budgetSummary.percentageConsumed > 100 ? (
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                ) : overview.budgetSummary.percentageConsumed >= 80 ? (
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                ) : (
-                  <CheckCircle className="w-4 h-4 text-purple-600 shrink-0" />
-                )}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">
-                    Monthly Spending Limit Progress
-                  </h4>
-                  <p className="text-[11px] text-slate-600">
-                    Spent{" "}
-                    <span className="font-semibold text-slate-900">
-                      {formatRupees(overview.budgetSummary.totalSpentPaise)}
-                    </span>{" "}
-                    of{" "}
-                    <span className="font-semibold text-slate-900">
-                      {formatRupees(overview.budgetSummary.totalBudgetPaise)}
-                    </span>{" "}
-                    ({overview.budgetSummary.percentageConsumed}%)
-                  </p>
-                </div>
+        {/* Spending Trajectory Card */}
+        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-100 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-4 h-4" />
               </div>
-              <Link href="/budgets">
-                <Button variant="outline" size="sm" className="bg-white text-xs px-2.5 py-1">
-                  Manage Budgets
-                </Button>
-              </Link>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+                  Spending Trajectory
+                </h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400">
+                  Your daily spending this month
+                </p>
+              </div>
             </div>
-            {/* Progress bar */}
-            <div className="mt-2.5 w-full h-1.5 sm:h-2 rounded-full bg-slate-200 overflow-hidden">
-              <div
-                style={{
-                  width: `${Math.min(100, overview.budgetSummary.percentageConsumed)}%`,
-                }}
-                className={`h-full transition-all duration-300 ${
-                  overview.budgetSummary.percentageConsumed > 100
-                    ? "bg-rose-500"
-                    : overview.budgetSummary.percentageConsumed >= 80
-                    ? "bg-amber-500"
-                    : "bg-purple-600"
-                }`}
-              />
+
+            {/* Daily Dropdown Pill */}
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] font-semibold text-slate-700">
+              <span>Daily</span>
+              <ChevronDown className="w-3 h-3 text-slate-500" />
             </div>
-          </Card>
-        )}
+          </div>
 
-        {/* Charts & Breakdown Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Spending Trend Line Chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Spending Trajectory (Current Month)</CardTitle>
-              <span className="text-[10px] sm:text-xs text-slate-400">Daily totals in ₹</span>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="h-40 sm:h-48 flex items-center justify-center text-xs text-slate-400">
-                  Loading trend data...
-                </div>
-              ) : (
-                <SpendingTrendChart data={monthSummary?.dailyTrend || []} />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Category-Wise Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Categories this Month</CardTitle>
-              <Link
-                href="/categories"
-                className="text-xs font-semibold text-purple-600 hover:text-purple-700"
-              >
-                View all
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="py-6 text-center text-xs text-slate-400">
-                  Loading category data...
-                </div>
-              ) : (
-                <CategoryBreakdownBar
-                  categories={overview?.topCategories || []}
-                />
-              )}
-            </CardContent>
-          </Card>
+          {/* Bar Chart */}
+          <SpendingTrendChart data={monthSummary?.dailyTrend || []} />
         </div>
 
-        {/* Recent Transactions List */}
-        <Card>
-          <CardHeader>
+        {/* Top Categories Section - Horizontally Scrollable (High to Low Filter) */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+              Top Categories
+            </h3>
+            <Link
+              href="/categories"
+              className="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1"
+            >
+              <span>View all</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {/* Horizontally Scrollable Categories (Side Scroll, High to Low) */}
+          {sortedCategories.length === 0 ? (
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 text-center text-xs text-slate-400">
+              No categories available yet. Click &quot;View all&quot; to manage categories.
+            </div>
+          ) : (
+            <div
+              className="flex items-center gap-2.5 overflow-x-auto pb-1 pt-1 no-scrollbar [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 -mx-1 px-1 scroll-smooth"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {sortedCategories.map((cat, idx) => {
+                const isTopExpense = idx === 0 && cat.totalPaise > 0;
+                return (
+                  <div
+                    key={cat.categoryId}
+                    className={`shrink-0 w-24 sm:w-28 rounded-2xl p-2.5 sm:p-3 flex flex-col items-center justify-center text-center transition-all ${
+                      isTopExpense
+                        ? "bg-[#f5f0ff] border border-purple-200 shadow-2xs"
+                        : "bg-white border border-slate-100 shadow-2xs hover:border-slate-200"
+                    }`}
+                  >
+                    <div className="mb-1.5 flex items-center justify-center">
+                      {getCategoryIcon(cat.name, cat.color)}
+                    </div>
+                    <p className="text-[11px] sm:text-xs font-semibold text-slate-800 truncate w-full">
+                      {cat.name}
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] font-bold text-slate-900 mt-0.5 truncate w-full">
+                      {formatRupees(cat.totalPaise)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Transactions Section */}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <ReceiptText className="w-3.5 h-3.5 text-purple-600" />
-              <CardTitle>Recent Transactions</CardTitle>
+              <Clock className="w-4 h-4 text-purple-600" />
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900">
+                Recent Transactions
+              </h3>
             </div>
             <Link
               href="/expenses"
-              className="text-xs font-semibold text-purple-600 hover:text-purple-700"
+              className="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1"
             >
-              See all &rarr;
+              <span>See all</span>
+              <ArrowRight className="w-3 h-3" />
             </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            {(!overview?.recentTransactions || overview.recentTransactions.length === 0) ? (
-              <div className="p-6 text-center text-xs text-slate-400">
-                No transactions recorded yet. Click &quot;+ Quick Add&quot; above to record your first expense!
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {overview.recentTransactions.map((tx: any) => {
-                  const isExpense = tx.type === "expense";
-                  const categoryName = tx.categoryId?.name || "General";
-                  const categoryColor = tx.categoryId?.color || "#7c3aed";
+          </div>
 
-                  return (
-                    <div
-                      key={tx._id}
-                      className="px-3.5 py-2.5 sm:px-5 sm:py-3.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-[11px] sm:text-xs font-bold text-white shrink-0"
-                          style={{ backgroundColor: categoryColor }}
-                        >
-                          {categoryName[0]}
-                        </span>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-800 line-clamp-1">
-                            {tx.description || categoryName}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-400">
-                            <span>{categoryName}</span>
-                            <span>•</span>
-                            <span>{formatDate(tx.date)}</span>
-                            <span>•</span>
-                            <span className="uppercase text-[9px] bg-slate-100 px-1 rounded text-slate-500">
-                              {tx.paymentMethod || "UPI"}
-                            </span>
-                          </div>
-                        </div>
+          {/* Transactions List */}
+          {(!overview?.recentTransactions || overview.recentTransactions.length === 0) ? (
+            <div className="bg-white rounded-2xl p-5 border border-slate-100 text-center text-xs text-slate-400">
+              No recent transactions recorded yet. Tap the <strong>+</strong> button below to record your first transaction!
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {overview.recentTransactions.slice(0, 5).map((tx: any) => {
+                const isIncome = tx.type === "income";
+                const categoryName = tx.categoryId?.name || "General";
+                const paymentMethod = tx.paymentMethod ? tx.paymentMethod.toUpperCase() : "UPI";
+
+                return (
+                  <div
+                    key={tx._id}
+                    className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-100 shadow-2xs flex items-center justify-between hover:border-purple-200 transition-colors"
+                  >
+                    {/* Left Icon & Details */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                          isIncome
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-purple-50 text-purple-600"
+                        }`}
+                      >
+                        {isIncome ? (
+                          <Wallet className="w-4 h-4" />
+                        ) : (
+                          getCategoryIcon(categoryName)
+                        )}
                       </div>
-
-                      <div className="text-right shrink-0 pl-2">
-                        <span
-                          className={`text-xs sm:text-sm font-bold ${
-                            isExpense ? "text-slate-900" : "text-emerald-600"
-                          }`}
-                        >
-                          {isExpense ? "-" : "+"}
-                          {formatRupees(tx.amountPaise)}
-                        </span>
-                        <div>
-                          <Badge
-                            variant={isExpense ? "neutral" : "success"}
-                            className="text-[9px] py-0 px-1 mt-0.5"
-                          >
-                            {tx.type}
-                          </Badge>
-                        </div>
+                      <div>
+                        <p className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1">
+                          {tx.description || categoryName}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">
+                          {formatDate(tx.date)} • {paymentMethod}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
-      <QuickAddExpenseModal
-        isOpen={isQuickAddOpen}
-        onClose={() => setIsQuickAddOpen(false)}
-        onSuccess={fetchDashboardData}
-      />
+                    {/* Right Amount & Badge */}
+                    <div className="text-right shrink-0 pl-2">
+                      <p
+                        className={`text-xs sm:text-sm font-bold ${
+                          isIncome ? "text-emerald-600" : "text-slate-900"
+                        }`}
+                      >
+                        {isIncome ? "+" : "-"}
+                        {formatRupees(tx.amountPaise)}
+                      </p>
+                      <div className="mt-0.5">
+                        <span
+                          className={`text-[9px] font-semibold px-2 py-0.5 rounded-full capitalize ${
+                            isIncome
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-purple-50 text-purple-700"
+                          }`}
+                        >
+                          {tx.type}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </AppLayout>
   );
 }

@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
-import { Button } from "../ui/Button";
 import { QuickAddExpenseModal } from "../modals/QuickAddExpenseModal";
 import {
   Wallet,
-  LayoutDashboard,
+  Home,
   ReceiptText,
   Tags,
-  PiggyBank,
+  Layers,
   CalendarDays,
   Plus,
+  Bell,
   LogOut,
   User as UserIcon,
 } from "lucide-react";
@@ -22,119 +22,207 @@ export const Navbar = ({ onExpenseAdded }: { onExpenseAdded?: () => void }) => {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Expenses", href: "/expenses", icon: ReceiptText },
-    { label: "Categories", href: "/categories", icon: Tags },
-    { label: "Budgets", href: "/budgets", icon: PiggyBank },
-    { label: "Calendar", href: "/calendar", icon: CalendarDays },
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+    if (isProfileOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isProfileOpen]);
+
+  // Left 2 items
+  const leftNavItems = [
+    {
+      label: "Home",
+      href: "/dashboard",
+      icon: Home,
+      isActive: pathname === "/dashboard" || pathname === "/",
+    },
+    {
+      label: "Expenses",
+      href: "/expenses",
+      icon: ReceiptText,
+      isActive: pathname.startsWith("/expenses"),
+    },
   ];
+
+  // Right 2 items
+  const rightNavItems = [
+    {
+      label: "Budgets",
+      href: "/budgets",
+      icon: Layers,
+      isActive: pathname.startsWith("/budgets"),
+    },
+    {
+      label: "Category",
+      href: "/categories",
+      icon: Tags,
+      isActive: pathname.startsWith("/categories"),
+    },
+  ];
+
+  const isCalendarActive = pathname.startsWith("/calendar");
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xs border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-13 sm:h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-6 sm:gap-8">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 font-bold text-slate-900 group"
-              >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-2xs group-hover:bg-purple-700 transition-colors">
-                  <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 leading-tight">
-                    DailyBudget
-                  </span>
-                  <span className="text-[9px] sm:text-[10px] text-purple-600 font-semibold uppercase tracking-wider">
-                    Tracker
-                  </span>
-                </div>
-              </Link>
-
-              {/* Desktop Navigation */}
-              <nav className="hidden md:flex items-center gap-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                        isActive
-                          ? "bg-purple-50 text-purple-700"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
+      {/* Top Header */}
+      <header className="sticky top-0 z-30 bg-[#fbfbfe]/90 backdrop-blur-md">
+        <div className="max-w-md sm:max-w-2xl md:max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Logo & App Title */}
+          <Link href="/dashboard" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-800 text-white flex items-center justify-center shadow-md shadow-purple-600/30 group-hover:scale-105 transition-transform">
+              <Wallet className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </div>
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
+              KashKutie
+            </h1>
+          </Link>
 
-            {/* Right actions */}
-            <div className="flex items-center gap-1.5 sm:gap-3">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setIsQuickAddOpen(true)}
-                className="shadow-2xs text-xs px-2 sm:px-3 py-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Quick Add</span>
-              </Button>
+          {/* Right actions: Notification Bell, Calendar (between bell and user logo), and Profile Avatar */}
+          <div className="flex items-center gap-2 sm:gap-2.5 relative" ref={profileMenuRef}>
+            {/* Notification Bell */}
+            <button
+              type="button"
+              className="relative w-9 h-9 rounded-full bg-white border border-slate-200/80 shadow-2xs text-slate-700 flex items-center justify-center hover:bg-slate-50 transition-colors"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4 text-slate-700" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
+            </button>
 
-              <div className="flex items-center gap-1.5 pl-1.5 sm:pl-3 sm:border-l border-slate-200 text-xs text-slate-700">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-[11px] sm:text-xs">
-                  {user?.name?.[0]?.toUpperCase() || <UserIcon className="w-3 h-3" />}
+            {/* Calendar Button (in between Notification Bell and Profile Avatar) */}
+            <Link
+              href="/calendar"
+              className={`w-9 h-9 rounded-full border shadow-2xs flex items-center justify-center transition-colors ${
+                isCalendarActive
+                  ? "bg-purple-50/80 border-2 border-purple-600 text-purple-700 shadow-2xs font-bold"
+                  : "bg-white border-slate-200/80 text-slate-700 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50/40"
+              }`}
+              title="Calendar View"
+            >
+              <CalendarDays className="w-4 h-4" />
+            </Link>
+
+            {/* Profile Avatar */}
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className="w-9 h-9 rounded-full bg-[#351e5e] text-white font-bold text-xs sm:text-sm flex items-center justify-center shadow-xs hover:ring-2 hover:ring-purple-400 transition-all cursor-pointer"
+              title="Profile & Settings"
+            >
+              {user?.name?.[0]?.toUpperCase() || <UserIcon className="w-4 h-4" />}
+            </button>
+
+            {/* User Dropdown Menu */}
+            {isProfileOpen && (
+              <div className="absolute right-0 top-11 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-2 border-b border-slate-100">
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {user?.name || "User"}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate">
+                    {user?.email || ""}
+                  </p>
                 </div>
-                <span className="hidden sm:inline font-medium max-w-[120px] truncate">
-                  {user?.name}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors mt-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log out</span>
+                </button>
               </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={logout}
-                title="Log out"
-                className="text-slate-400 hover:text-rose-600 p-1.5"
-              >
-                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </Button>
-            </div>
+            )}
           </div>
-        </div>
-
-        {/* Mobile Navigation bar */}
-        <div className="md:hidden border-t border-slate-100 px-1 py-1 flex items-center justify-around bg-slate-50/70">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-md text-[9px] font-medium transition-colors ${
-                  isActive
-                    ? "text-purple-700 font-bold"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {item.label}
-              </Link>
-            );
-          })}
         </div>
       </header>
 
+      {/* Floating Bottom Navigation Bar (White Theme, Center Plus) */}
+      <nav
+        aria-label="Bottom Navigation"
+        className="fixed bottom-0 inset-x-0 z-50 flex justify-center px-3 sm:px-4 pb-2.5 sm:pb-4 pointer-events-none"
+      >
+        <div className="pointer-events-auto w-full max-w-[380px] sm:max-w-md bg-white text-slate-500 rounded-2xl sm:rounded-3xl px-2 py-1.5 sm:px-3 sm:py-2 shadow-xl shadow-slate-900/10 border border-slate-200/90 flex items-center justify-between">
+          {/* Left 2 Items: Home, Expenses */}
+          <div className="flex items-center justify-around flex-1 gap-1">
+            {leftNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center transition-all ${
+                    item.isActive
+                      ? "border-2 border-purple-600 text-purple-700 bg-purple-50/70 font-bold px-2 py-1 rounded-xl shadow-2xs w-full max-w-[56px]"
+                      : "border-2 border-transparent text-slate-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50/40 px-2 py-1 rounded-xl w-full max-w-[52px]"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />
+                  <span className="text-[9px] sm:text-[10px] font-semibold mt-0.5 tracking-tight truncate max-w-full text-center">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Center Quick Add Action (+) - Border Design */}
+          <div className="shrink-0 px-2 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setIsQuickAddOpen(true)}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border-2 border-purple-600 text-purple-700 bg-purple-50/70 hover:bg-purple-100 hover:border-purple-700 flex items-center justify-center shadow-2xs transition-transform active:scale-95 cursor-pointer"
+              title="Quick Add Expense"
+              aria-label="Quick Add Expense"
+            >
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          </div>
+
+          {/* Right 2 Items: Budgets, Category */}
+          <div className="flex items-center justify-around flex-1 gap-1">
+            {rightNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center transition-all ${
+                    item.isActive
+                      ? "border-2 border-purple-600 text-purple-700 bg-purple-50/70 font-bold px-2 py-1 rounded-xl shadow-2xs w-full max-w-[56px]"
+                      : "border-2 border-transparent text-slate-500 hover:border-purple-300 hover:text-purple-600 hover:bg-purple-50/40 px-2 py-1 rounded-xl w-full max-w-[52px]"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />
+                  <span className="text-[9px] sm:text-[10px] font-semibold mt-0.5 tracking-tight truncate max-w-full text-center">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
+
+      {/* Global Quick Add Expense Modal */}
       <QuickAddExpenseModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}

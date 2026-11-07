@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "Daily Budget Tracker",
+  title: "KashKutie - Budget Tracker",
   description: "Personal Daily Budget Tracker - Monitor expenses, budgets, and financial habits",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -14,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <body className="min-h-screen flex flex-col bg-[#fbfbfe] text-slate-900 font-sans antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
