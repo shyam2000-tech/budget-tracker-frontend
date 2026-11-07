@@ -22,10 +22,10 @@ export const AppLayout = ({ children, onRefresh }: AppLayoutProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#fbfbfe]">
         <div className="flex flex-col items-center gap-2.5">
-          <div className="w-7 h-7 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-medium text-slate-500">Loading your budget space...</p>
+          <div className="w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-medium text-slate-500">Loading KashKutie...</p>
         </div>
       </div>
     );
@@ -36,9 +36,9 @@ export const AppLayout = ({ children, onRefresh }: AppLayoutProps) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#fbfbfe] text-slate-900">
       <Navbar onExpenseAdded={onRefresh} />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
+      <main className="flex-1 max-w-md sm:max-w-xl md:max-w-3xl lg:max-w-4xl w-full mx-auto px-3.5 sm:px-6 pt-1 pb-24 sm:pb-28">
         {children}
       </main>
     </div>
